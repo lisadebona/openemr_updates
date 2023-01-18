@@ -271,8 +271,8 @@
             $('.total-records._events').html("");
 
             /* Reset Amount */
-            $('.mini-reports .rates-result').html('<div class="ri-group"> <div class="ri-col tcol1">--</div> <div class="ri-col tcol2">--</div> <div class="ri-col tcol3">--</div> </div>');
-            $('.mini-reports .rates-overall-total').html('<strong>Total: </strong><strong id="ratesTotalAmount">0.00</strong>');
+            // $('.mini-reports .rates-result').html('<div class="ri-group"> <div class="ri-col tcol1">--</div> <div class="ri-col tcol2">--</div> <div class="ri-col tcol3">--</div> </div>');
+            // $('.mini-reports .rates-overall-total').html('<strong>Total: </strong><strong id="ratesTotalAmount">0.00</strong>');
 
             if(type=='all') {
               $('#report_results .loader').addClass('show');
@@ -284,8 +284,9 @@
             // console.log(type);
             //console.log(data);
             $('.dateRange').html(data.daterange);
-            $('.rates-result').html(data.rates_html);
-            $('#ratesTotalAmount').html(data.rates_total);
+            //$('.rates-result').html(data.rates_html);
+            //$('#ratesTotalAmount').html(data.rates_total);
+ 
             if(type=='all') {
               /* ENCOUNTER */
               if(data.encounters.display) {
@@ -332,7 +333,11 @@
               $('#report_results .loader').removeClass('show');
             },500);
             $('#report_results section').css('min-height','auto');
-            getExtraEncounterInfo();
+            //getExtraEncounterInfo();
+
+            var newParams = params.replace('formtype=employeetimesheet','formtype=all');
+            displayTheSummary(newParams);
+
           },
           error: function(xhr, status, error) {
             var err = eval("(" + xhr.responseText + ")");
@@ -342,40 +347,60 @@
       }
     }
 
-
-    function getExtraEncounterInfo() {
-      var noteCode = 90785;
-      if( $('#encounter-items-tbl tr').length ) {
-        $('#encounter-items-tbl tr').each(function(){
-          var target = $(this);
-          var descriptionColumn = target.find('td.col5');
-          let params = {
-            'extrainfo':'encounter',
-            'encounter':$(this).attr('data-encounter-id'),
-            'code':noteCode,
-          };
-          $.ajax({
-            type: 'GET',
-            url: functionURL,
-            data: params,
-            dataType:'json',
-            beforeSend:function(){
-              
-            },
-            success: function (data) {
-              if(data) {
-                var code = data.additional_session_type;
-                var description = data.codeDescription;
-                var codeDescription = '<div><strong style="color:#e32d2d">('+code+' - '+description+')</strong></div>';
-                $(descriptionColumn).append(codeDescription);
-              }
+    function displayTheSummary(params) {
+      $.ajax({
+          type: 'GET',
+          url: functionURL,
+          data: params,
+          dataType:'json',
+          beforeSend:function(){
+          },
+          success: function (data) {
+            console.log(data);
+            if(data) {
+              $('.rates-result').html(data.rates_html);
+              $('#ratesTotalAmount').html(data.rates_total);
             }
-
-          });
-
-        });
-      }
+          }
+      });
     }
+
+
+    // function getExtraEncounterInfo() {
+    //   //var noteCode = 90785;
+    //   if( $('#encounter-items-tbl tr').length ) {
+    //     $('#encounter-items-tbl tr').each(function(){
+    //       var target = $(this);
+    //       var descriptionColumn = target.find('td.col5');
+    //       let params = {
+    //         'extrainfo':'encounter',
+    //         'encounter':$(this).attr('data-encounter-id'),
+    //         'provider_id':$('select[name="provider"]').val()
+    //       };
+    //       $.ajax({
+    //         type: 'GET',
+    //         url: functionURL,
+    //         data: params,
+    //         dataType:'json',
+    //         beforeSend:function(){
+              
+    //         },
+    //         success: function (data) {
+    //           if(data) {
+    //             var code = data.additional_session_type;
+    //             var description = data.codeDescription;
+    //             if(code){
+    //               var codeDescription = '<div><strong style="color:#e32d2d">('+code+' - '+description+')</strong></div>';
+    //               $(descriptionColumn).append(codeDescription);
+    //             }
+    //           }
+    //         }
+
+    //       });
+
+    //     });
+    //   }
+    // }
 
     $(document).on('click','.pagination a',function(e){
       e.preventDefault();

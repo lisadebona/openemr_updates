@@ -50,7 +50,7 @@ $new_table_query = "SHOW TABLES LIKE '".$new_table_name."'";
 $new_table_res = sqlStatement($new_table_query);
 if($new_table_res->_queryID->num_rows == 0) {
   $new_table = "CREATE TABLE IF NOT EXISTS ".$new_table_name."(
-    `id` bigint(20) NOT NULL,
+    `id` bigint(20) NOT NULL AUTO_INCREMENT,
     `type_id` bigint(20) DEFAULT NULL,
     `type` varchar(255) DEFAULT NULL,
     `comments` longtext,
@@ -61,8 +61,8 @@ if($new_table_res->_queryID->num_rows == 0) {
   ) ENGINE=InnoDB";
   sqlStatement($new_table);
 } else {
-  $new_table = "ALTER TABLE `employee_timesheet` CHANGE `id` `id` BIGINT(20) NOT NULL AUTO_INCREMENT";
-  sqlStatement($new_table);
+  // $new_table = "ALTER TABLE `employee_timesheet` CHANGE `id` `id` BIGINT(20) NOT NULL AUTO_INCREMENT";
+  // sqlStatement($new_table);
 } 
 
 ?>

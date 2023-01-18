@@ -28,11 +28,19 @@ if(!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
     echo json_encode($res);
   }
 
-  /* QUERY ADDITIONAL ENCOUNTER INFO */
-  if( isset($_REQUEST['extrainfo']) && $_REQUEST['extrainfo']=='encounter' ) {
-    $extrainfo = getAdditionalSessionType($_REQUEST);
-    echo json_encode($extrainfo);
+  /* GET ALL RECORDS */
+  if( isset($_REQUEST['formtype']) && $_REQUEST['formtype']=='all' ) {
+    //$res = getEmployeeTimesheet($_REQUEST);
+    $_REQUEST['limit'] = 'all';
+    $allres = getTimesheetRecords($_REQUEST);
+    echo json_encode($allres);
   }
+
+  /* QUERY ADDITIONAL ENCOUNTER INFO */
+  // if( isset($_REQUEST['extrainfo']) && $_REQUEST['extrainfo']=='encounter' ) {
+  //   $extrainfo = getAdditionalSessionType($_REQUEST);
+  //   echo json_encode($extrainfo);
+  // }
 
   /* INSERT COMMENTS */
   if( isset($_REQUEST['formtype']) && $_REQUEST['formtype']=='insert-comments' ) {
@@ -44,6 +52,8 @@ if(!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
   	$res = getComments($_REQUEST['type_id'],$_REQUEST['type']);
   	echo json_encode($res);
   }
+
+
 
   
 
@@ -145,6 +155,16 @@ function getThePatientData($pid,$fields=null) {
 // $limit = 15;
 // $page = 1;
 
+// $params['provider'] = 66;
+// $params['from_date'] = '2022-01-01';
+// $params['to_date'] = '2022-04-01';
+// $params['limit'] = 'all';
+// $data = getAllRecords($params);
+// echo "<pre>";
+// print_r($data);
+// echo "</pre>";
+
+
 function getTimesheetRecords($params) {
 	global $_data;
 	$provider_id = $params['provider'];
@@ -188,6 +208,7 @@ function getTimesheetRecords($params) {
       if($result2) {
         foreach($result2 as $re) {
           if( $data = getEncounterData($re['encounter'],$patient_fields) ) {
+            $form_encounter_row_id = $data['id'];
             $rateAmount = '00.00';
             $patientFullName = '';
             $codeName = '';
@@ -204,6 +225,10 @@ function getTimesheetRecords($params) {
             $data['signTable'] = $table;
             $data['serviceDate'] = $service_date;
 
+
+           
+            $customCodeRateAmount = 0;
+            $extraCodes='';
             $patient = (isset($data['patient_details']) && $data['patient_details']) ? $data['patient_details'] : '';
             if($patient) {
               if( $patientNameArrs = array_filter( array($patient['title'],$patient['fname'],$patient['mname'],$patient['lname'] ) ) ) {
@@ -216,13 +241,39 @@ function getTimesheetRecords($params) {
                     $rateAmount = ($rt['rate']) ? number_format((float)$rt['rate'], 2, '.', '') : '0.00';
                   }
                 }
+
+              
+                /* Additional Rate Custom Code */
+                // if( $customCodes = getReportsOptions() ) {
+                //   if( isset($customCodes->note_codes) && $customCodes->note_codes ) {
+                //     foreach($customCodes->note_codes as $nc) {
+                //       $xcode = $nc->code;
+                //       $customCodeRateAmount = getCustomCodeRates($form_encounter_row_id,$provider_id,$xcode);
+                //     }
+                //   }
+                // }
+
+
+                $customCodeRes = getCustomCodeRates($form_encounter_row_id,$provider_id);
+                $customCodeRateAmount = (isset($customCodeRes['rate']) && $customCodeRes['rate']) ? $customCodeRes['rate'] : 0;
+                $xcodeName = (isset($customCodeRes['code']) && $customCodeRes['code']) ? $customCodeRes['code'] : '';
+                // $xcodeDesc = (isset($customCodeRes['description']) && $customCodeRes['description']) ? $customCodeRes['description'] : '';
+                if($xcodeName) {
+                  $extraCodes=$customCodeRes;
+                }
               }
             }
+
+
+
+            
+
 
             $data['patientFullName'] = $patientFullName;
             $data['codeName'] = $codeName;
             $data['patientMedicaid'] = $patientMedicaid;
-            $data['rateAmount'] = $rateAmount;
+            $data['rateAmount'] = $rateAmount + $customCodeRateAmount;
+            $data['customCode'] = $extraCodes;
             $records[$i] = $data;
             $i++;
           }
@@ -261,6 +312,46 @@ function getTimesheetRecords($params) {
     }
   }
 
+  /* GET ADDITIONAL CHARGES TOTAL (CUSTOM CODES) */
+  $all_query = $_data->query($query)->fetchAll();
+  $totalExtraCharges = 0;
+  $extra_charges_info = '';
+  $extraCodeArrs = array();
+  if($all_query) {
+    $x_total = 0;
+    $x_count = 0;
+    foreach($result as $ar) {
+      $a_table = $ar['table'];
+      $a_row_id = $ar['tid'];
+      $a_query = "SELECT encounter FROM " . $a_table . " WHERE id=".$a_row_id;
+      $a_result = $_data->query($a_query)->fetchAll();
+      $extraItems = array();
+      if($a_result) {
+        foreach($a_result as $a) {
+          $exCode = getCounselorProgressNote($a['encounter'],$provider_id);
+          if( isset($exCode['rate']) && $exCode['rate'] ) {
+            $xx_rate = ($exCode['rate']) ? $exCode['rate'] : 0;
+            $xx_code = $exCode['code'];
+            $xx_mixed = array($exCode['code'],$exCode['description']);
+            $xx_desc = implode(' - ',$xx_mixed);
+            $totalExtraCharges += $xx_rate;
+            //$extraCodeArrs[$xx_code][] = array('code'=>$xx_code,'description'=>$xx_desc,'rate'=>$xx_rate);
+            // $extraItems['code'] = $xx_code;
+            // $extraItems['description'] = $xx_desc;
+            // $extraItems['rate'][] = $xx_rate;
+            $x_total += $xx_rate;
+            $x_count ++;
+            $extraCodeArrs[$xx_code]['description'] = $xx_desc;
+            $extraCodeArrs[$xx_code]['count'] = $x_count;
+            $extraCodeArrs[$xx_code]['total'] = $x_total;
+          }
+        }
+        
+      }
+    }
+  }
+
+
   /* Timsheet HTML output */
 	$html = displayTimesheetRows($records,$offset);
 	$date_range = 'From: ' . $params['from_date'].' To: '.$params['to_date'];
@@ -286,8 +377,20 @@ function getTimesheetRecords($params) {
 	$respond['rates_html'] = $enc_rates_html . $rates_html;
 	$respond['rates_total'] = $r_total_rates;
 
-
-	return $respond;
+  if($limit=='all') {
+    if($extraCodeArrs) {
+      foreach($extraCodeArrs as $code=>$c_data) {
+        $rates_html .= '<div class="ri-group custom-code-info"> <div class="ri-col tcol1">'.$c_data['description'].'</div> <div class="ri-col tcol2">'.$c_data['count'].'</div> <div class="ri-col tcol3">'.$c_data['total'].'</div> </div>';
+      }
+    }
+    $allTotalNum = $r_total_rates + $totalExtraCharges;
+    $respondAll['rates_html'] = $enc_rates_html . $rates_html;
+    $respondAll['rates_total'] = number_format((float)$allTotalNum, 2, '.', '');
+    $respondAll['rates_extra'] = $extraCodeArrs;
+    return $respondAll;
+  } else {
+    return $respond;
+  }
 }
 
 function displayTimesheetRows($result,$offset) {
@@ -299,15 +402,28 @@ function displayTimesheetRows($result,$offset) {
 			$notes = getComments($row['id'],'encounter'); 
 			$note_id = ($notes) ? $notes['id'] : '';
 			$viewLabel = ($note_id) ? 'View Comment':'Add Comment';
+      $customCode = (isset($row['customCode']) && $row['customCode']) ? $row['customCode'] : '';
+      $extra_code = '';
+      if($customCode) {
+        $x_rate = (isset($customCode['rate']) && $customCode['rate']) ? $customCode['rate'] : '';
+        $x_code = (isset($customCode['code']) && $customCode['code']) ? $customCode['code'] : '';
+        $x_desc = (isset($customCode['description']) && $customCode['description']) ? $customCode['description'] : '';
+        $extra_code = $x_code.' - '.$x_desc;
+      }
 		?>
-		<tr data-noteid="<?php echo $note_id ?>" data-typeid="<?php echo $row['id'] ?>" data-type="encounter" data-encounter-id="<?php echo $row['id'] ?>" data-esign-id="<?php echo $row['esignID'] ?>" class="line-item encounter-id-<?php echo $row['id'] ?>">
+		<tr data-encounternum="<?php echo $row['encounter'] ?>" data-noteid="<?php echo $note_id ?>" data-typeid="<?php echo $row['id'] ?>" data-type="encounter" data-encounter-id="<?php echo $row['id'] ?>" data-esign-id="<?php echo $row['esignID'] ?>" class="line-item encounter-id-<?php echo $row['id'] ?>">
          <td class="col1"><?php echo $rowCtr  ?>.</td>
          <td class="col2"><?php echo $row['patientFullName'] ?></td>
          <td class="col3"><?php echo $row['serviceDate'] ?></td>
          <td class="col4"><?php echo $row['facility'] ?></td>
-         <td class="col5"><?php echo $row['codeName'] ?></td>
+         <td class="col5">
+          <?php echo $row['codeName'] ?>
+          <?php if ($extra_code) { ?>
+          <div><strong style="color:#e32d2d">(<?php echo $extra_code ?>)</strong></div>
+          <?php } ?>
+        </td>
          <td class="col6"><?php echo $row['patientMedicaid'] ?></td>
-         <td class="col7"><?php echo $row['rateAmount'] ?></td>
+         <td class="col7"><?php echo ($row['rateAmount']) ? number_format((float)$row['rateAmount'], 2, '.', '') : '0.00'; ?></td>
          <td class="col8 action-buttons">
            <a href="javascript:void(0)" class="action-btn" data-action="view"><?php echo $viewLabel ?></a>
          </td>
@@ -445,13 +561,6 @@ function getCategoryListing($query,$provider_id) {
 }
 
 
-// $params['provider'] = 50;
-// $params['from_date'] = '2021-09-01';
-// $params['to_date'] = '2021-09-31';
-// $data = getProviderEvents($params);
-// echo "<pre>";
-// print_r($data);
-// echo "</pre>";
 
 /* PROVIDER EVENTS */
 function getProviderEvents($params) {
@@ -561,45 +670,29 @@ function displayProviderEventsRows($records,$offset=1) {
 
 function getAdditionalSessionType($params) {
   global $_data;
-  $part = 'counselor_progress_note';
-  $tableName = 'form_'.$part;
-  $encounter_id = ( isset($params['encounter']) && $params['encounter'] ) ? $params['encounter'] : '';
-  $code = ( isset($params['code']) && $params['code'] ) ? $params['code'] : '';
+  $encounter_row_id = ( isset($params['encounter']) && $params['encounter'] ) ? $params['encounter'] : '';
+  $provider_id = ( isset($params['provider_id']) && $params['provider_id'] ) ? $params['provider_id'] : '';
   $code_description = '';
+  $output['additional_session_type'] = '';
+  $output['codeDescription'] = '';
+
   $note_codes = getReportsOptions('note_codes');
   if($note_codes) {
     foreach($note_codes as $n) {
-      if($code==$n->code){
-        $code_description = $n->description;
-      }
-    }
-  }
-
-  $output = '';
-  if($encounter_id && $code) {
-    $query = "SELECT f.form_id, f.encounter, f.form_name, f.formdir FROM form_encounter e, forms f WHERE e.encounter=f.encounter AND e.encounter=".$encounter_id." AND f.formdir='".$part."'";
-    /* Check if Table exists */
-    $result = $_data->query($query)->fetchAll();
-    if($result) {
-      $tblquery = "SHOW TABLES LIKE '".$tableName."'";
-      $tableExist = $_data->query($tblquery)->fetchAll();
-      if($tableExist) {
-        foreach($result as $r) {
-          $form_id = $r['form_id'];
-          $q2 = "SELECT id,encounter,pid,counselor,additional_session_type FROM ".$tableName." WHERE id=".$form_id." AND additional_session_type=".$code;
-          $r2 = $_data->query($q2)->fetchAll();
-          if($r2) {
-            if(isset($r2[0]) && $r2[0]) {
-              $r2[0]['codeDescription'] = $code_description;
-              $output = ($r2) ? $r2[0]:'';
-              break;
-            }
-          }
+      $code = $n->code;
+      $additional_charge = $n->additional_charge;
+      $code_description = $n->description;
+      if($additional_charge) {
+        $query = "SELECT e.id, e.encounter, e.provider_id FROM form_encounter e, form_counselor_progress_note n WHERE e.encounter=n.encounter AND e.id=".$encounter_row_id." AND e.provider_id=".$provider_id." AND n.additional_session_type='".$code."'";
+        $result = $_data->query($query)->fetchAll();
+        if($result) {
+          $output['additional_session_type'] = $code;
+          $output['codeDescription'] = $code_description;
         }
       }
+      
     }
   }
-
   return $output;
 }
 
@@ -634,5 +727,70 @@ function getReportsOptions($key=null) {
 }
 
 
+/* GET EMPLOYEE RATES BY CUSTOM CATEGORY */
+function getCustomCodeRates($encounter_row_id,$provider_id) {
+  global $_data;
+  $rateAmount = 0;
+  $output['rate'] = '';
+  $output['code'] = '';
+  $output['description'] = '';
+  $note_codes = getReportsOptions('note_codes');
+  if($note_codes) {
+    foreach($note_codes as $n) {
+      $code = $n->code;
+      $code_description = $n->description;
+      $additional_charge = $n->additional_charge;
+      if($additional_charge) {
+        $query = "SELECT e.id, e.encounter, e.provider_id FROM form_encounter e, form_counselor_progress_note n WHERE e.encounter=n.encounter AND e.id=".$encounter_row_id." AND e.provider_id=".$provider_id." AND n.additional_session_type='".$code."'";
+        $result = $_data->query($query)->fetchAll();
+        if($result) {
+          $rateQuery = "SELECT * FROM user_employee_rates WHERE user_id=" . $provider_id . " AND custom_code='".$code."'";
+          $rateResult = $_data->query($rateQuery)->fetchAll();
+          if($rateResult) {
+            foreach($rateResult as $row) {
+              $rateAmount = ($row['rate']) ? $row['rate'] : 0;
+              $output['rate'] = $rateAmount;
+              $output['code'] = $code;
+              $output['description'] = $code_description;
+            }
+          }
+        }
+      }
+      
+    }
+  }
 
+  return $output;
+}
 
+/* GET `form_counselor_progress_note` by `encounter` */
+function getCounselorProgressNote($encounter,$provider_id) {
+  global $_data;
+  $output = array();
+  $note_codes = getReportsOptions('note_codes');
+  if($note_codes) {
+    foreach($note_codes as $n) {
+      $code = $n->code;
+      $code_description = $n->description;
+      $additional_charge = $n->additional_charge;
+      if($additional_charge) {
+        $query = "SELECT id,encounter,additional_session_type FROM form_counselor_progress_note n WHERE n.encounter=".$encounter." AND n.counselor=".$provider_id." AND n.additional_session_type='".$code."'";
+        $result = $_data->query($query)->fetchAll();
+        if($result) {
+          /* GET THE RATE */
+          $rateQuery = "SELECT * FROM user_employee_rates WHERE user_id=" . $provider_id . " AND custom_code='".$code."'";
+          $rateResult = $_data->query($rateQuery)->fetchAll();
+          if($rateResult) {
+            foreach($rateResult as $row) {
+              $rateAmount = ($row['rate']) ? $row['rate'] : 0;
+              $output['rate'] = $rateAmount;
+              $output['code'] = $code;
+              $output['description'] = $code_description;
+            }
+          }
+        }
+      }
+    }
+  }
+  return $output;
+}
