@@ -13,7 +13,6 @@ Modified Date: February 13, 2023
 * Path: interface/main/calendar/modules/PostCalendar/pntemplates/default/views/month/ajax_template.html
 
 **EMOTICONS:** 
-  *This is where to add status or change emoticon*
 * Path: interface/main/calendar/calendar_options.json
 
 
