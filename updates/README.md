@@ -8,18 +8,18 @@ Modified files:
 * Path:  interface/main/tabs/main.php
 * Path:  interface/main/calendar/add_edit_event.php
 
-Calendar Folder:
+**Calendar Folder:**
 * Path: interface/main/calendar/modules/PostCalendar/pntemplates/default/views/day/ajax_template.html
 * Path: interface/main/calendar/modules/PostCalendar/pntemplates/default/views/week/ajax_template.html
 * Path: interface/main/calendar/modules/PostCalendar/pntemplates/default/views/month/ajax_template.html
 
-EMOTICONS:
-This is where to add status or change emoticon
+**EMOTICONS:** 
+*This is where to add status or change emoticon*
 * Path: interface/main/calendar/calendar_options.json
 
 
-CSS
+**CSS**
 * Path: public/themes/style_emerald.css
 
-IMAGES:
+**IMAGES:**
 * Path:  public/icons
