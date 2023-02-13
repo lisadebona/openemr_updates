@@ -13,9 +13,13 @@ Calendar Folder:
 * Path: interface/main/calendar/modules/PostCalendar/pntemplates/default/views/week/ajax_template.html
 * Path: interface/main/calendar/modules/PostCalendar/pntemplates/default/views/month/ajax_template.html
 
+EMOTICONS:
+This is where to add status or change emoticon
+* Path: interface/main/calendar/calendar_options.json
+
 
 CSS
-* Path: interface/themes/ajax_calendar.css
+* Path: public/themes/style_emerald.css
 
 IMAGES:
 * Path:  public/icons
