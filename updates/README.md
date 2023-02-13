@@ -1,7 +1,7 @@
 =======
 # OpenEMR Changes
 
-* Modified Date: February 13, 2023
+Modified Date: February 13, 2023
 
 Modified files:
 
@@ -17,5 +17,5 @@ Calendar Folder:
 CSS
 * Path: interface/themes/ajax_calendar.css
 
-New Files:
-Path:  public/icons
+IMAGES:
+* Path:  public/icons
