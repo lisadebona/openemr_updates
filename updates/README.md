@@ -3,8 +3,7 @@
 
 Modified Date: February 13, 2023
 
-Modified files:
-
+**Modified files:**
 * Path:  interface/main/tabs/main.php
 * Path:  interface/main/calendar/add_edit_event.php
 
@@ -14,7 +13,7 @@ Modified files:
 * Path: interface/main/calendar/modules/PostCalendar/pntemplates/default/views/month/ajax_template.html
 
 **EMOTICONS:** 
-*This is where to add status or change emoticon*
+  *This is where to add status or change emoticon*
 * Path: interface/main/calendar/calendar_options.json
 
 
