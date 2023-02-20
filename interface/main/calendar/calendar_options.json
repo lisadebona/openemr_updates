@@ -1,0 +1,29 @@
+{
+  "status_label":"Fee Status",
+  "status":[
+    {
+      "name":"Paid",
+      "slug":"paid",
+      "icon":"money_mouth"
+    },
+    {
+      "name":"Cancelled",
+      "slug":"cancelled",
+      "icon":"sad"
+    },
+    {
+      "name":"Refunded",
+      "slug":"refunded",
+      "icon":"thinking"
+    }
+  ]
+}
+
+
+
+
+
+
+
+
+

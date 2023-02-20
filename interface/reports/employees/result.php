@@ -57,7 +57,7 @@
 
             <div class="form-group limit-field">
               <label for="limit">Page limit:</label>
-              <input type="number" name="limit" class="form-control" value="20">
+              <input type="number" name="limit" class="form-control" value="400">
             </div>
 
             <div class="buttons">
@@ -87,7 +87,7 @@
                   <tr>
                     <th class="col1">#</th>
                     <th class="col2">Client Name</th>
-                    <th class="col3">Date of Service</th>
+                    <th class="col3">E-Sign Date</th>
                     <th class="col4">Place of Service</th>
                     <th class="col5">CPT Code</th>
                     <th class="col6">Medicaid? (Yes/No)</th>
@@ -269,7 +269,8 @@
             $('#events-items-tbl').html("");
             $('.total-records._encounters').html("");
             $('.total-records._events').html("");
-
+            $('#formrespond').html("");
+            
             /* Reset Amount */
             // $('.mini-reports .rates-result').html('<div class="ri-group"> <div class="ri-col tcol1">--</div> <div class="ri-col tcol2">--</div> <div class="ri-col tcol3">--</div> </div>');
             // $('.mini-reports .rates-overall-total').html('<strong>Total: </strong><strong id="ratesTotalAmount">0.00</strong>');
@@ -281,8 +282,6 @@
             }
           },
           success: function (data) {
-            // console.log(type);
-            //console.log(data);
             $('.dateRange').html(data.daterange);
             //$('.rates-result').html(data.rates_html);
             //$('#ratesTotalAmount').html(data.rates_total);
@@ -356,7 +355,7 @@
           beforeSend:function(){
           },
           success: function (data) {
-            console.log(data);
+            //console.log(data);
             if(data) {
               $('.rates-result').html(data.rates_html);
               $('#ratesTotalAmount').html(data.rates_total);

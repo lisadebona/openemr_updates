@@ -172,7 +172,7 @@ function getTimesheetRecords($params) {
   $to_date_var = $params['to_date'];
 
 	$fromDate =  date('Y-m-d',strtotime($from_date_var));
-	$toDate =  date('Y-m-d',strtotime($to_date_var));
+	$toDate =  date('Y-m-d',strtotime($to_date_var . ' +1 day'));
 	$limit = ( isset( $params['limit'] ) ) ? $params['limit'] : 15;
 	$page = ( isset( $params['page'] ) ) ? $params['page'] : 1;
 	$links = ( isset( $params['links'] ) ) ? $params['links'] : 7;
