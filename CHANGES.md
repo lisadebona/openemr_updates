@@ -1,6 +1,28 @@
 =======
 # OpenEMR Changes
 
+Modified Date: April 09, 2023
+
+**Modified files:**
+* Path:  interface/misc/import-codes.php
+* Path:  interface/main/tabs/menu/menus/standard.json
+
+```
+{
+  "label": "Import Codes",
+    "menu_id": "adm0",
+    "target": "adm",
+    "url": "/interface/misc/import-codes.php",
+    "children": [],
+    "requirement": 0,
+    "acl_req": [
+      "admin",
+      "super"
+    ]
+}
+```
+
+
 Modified Date: February 13, 2023
 
 **Modified files:**
