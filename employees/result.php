@@ -530,6 +530,7 @@
         },
         error: function(xhr, status, error) {
           var err = eval("(" + xhr.responseText + ")");
+          console.log(error);
         }
       });
     }
@@ -731,6 +732,7 @@
       location.reload();
     });
 
+    /* Add Comment */
     $(document).on('click','.action-btn',function(e){
       e.preventDefault();
       var action = $(this).attr('data-action');
@@ -775,10 +777,16 @@
     });
 
     /* Submit form via ajax */
+    $('#commentsForm').on('submit',function(e){
+      e.preventDefault();
+    });
+
     $(document).on('click','#submitComments',function(e){
       e.preventDefault();
       var type_id = $('#commentsForm [name="type_id"]').val();
       var commentBox = $('#commentsForm [name="comments"]').val().trim();
+
+      //console.log( $('#commentsForm').serialize() );
 
       $.ajax({
         type: 'GET',
@@ -786,12 +794,19 @@
         data: $('#commentsForm').serialize(),
         dataType:'json',
         success: function (data) {
-          
-        },
-        complete:function(){
+          //console.log(data);
+          var commentid = (data.result) ? data.result : '';
           $('#commentsRespond').html('<div class="alert alert-success"><i class="fa fa-check"></i> Comments saved.</div>');
-          var commentLinkText = (commentBox && commentBox.replace(/\s+/g,'')) ? '<i class="fa fa-commenting-o" data-status="has-comment" aria-hidden="true"></i>':'<i class="fa fa-commenting-o" data-status="no-comment" aria-hidden="true"></i>';
-          $('tr[data-row-id="'+type_id+'"] a.comment-button-link').html(commentLinkText);
+          if(commentid) {
+            var commentLinkText = (commentBox && commentBox.replace(/\s+/g,'')) ? '<i class="fa fa-commenting-o" data-status="has-comment" aria-hidden="true"></i>':'<i class="fa fa-commenting-o" data-status="no-comment" aria-hidden="true"></i>';
+            $('tr[data-row-id="'+type_id+'"] a.comment-button-link').html(commentLinkText);
+            $('tr[data-row-id="'+type_id+'"] a.comment-button-link').removeClass('no-comment').addClass('has-comment');
+            $('tr[data-row-id="'+type_id+'"]').attr('data-comment-id',commentid);
+          }
+        },
+        complete:function(data){
+          
+          
         },
         error: function(xhr, status, error) {
           //var err = eval("(" + xhr.responseText + ")");

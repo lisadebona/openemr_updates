@@ -11,9 +11,8 @@ $baseURL = $rootURL . '/interface' .  explode('interface',__FILE__)[1];
 $apiKey = ( isset($_GET['api']) && $_GET['api'] ) ? $_GET['api'] : '';
 if($apiKey) {
 	$_data = new Queries( $apiKey );
-
 } else {
-	die('an API Key is required to access this function.');
+	//die('an API Key is required to access this function.');
 }
 
 
@@ -31,6 +30,20 @@ if(!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
     echo getProviderList($_REQUEST);
   }
 
+  /* TIMESHEET REPORTS LISTING */
+  if( isset($_REQUEST['formtype']) && $_REQUEST['formtype']=='timesheetreport' ) {
+    //$res = getEmployeeTimesheet($_REQUEST);
+    $res = getReports($_REQUEST);
+    echo json_encode($res);
+  }
+
+
+  /* TIMESHEET REPORTS SUMMARY */
+  if( isset($_REQUEST['formtype']) && $_REQUEST['formtype']=='summary' ) {
+    $res = getSummaryRates($_REQUEST);
+    echo json_encode($res);
+  }
+
   /* QUERY REPORTS */
   if( isset($_REQUEST['formtype']) && $_REQUEST['formtype']=='employeetimesheet' ) {
     //$res = getEmployeeTimesheet($_REQUEST);
@@ -44,6 +57,12 @@ if(!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
     $_REQUEST['limit'] = 'all';
     $allres = getTimesheetRecords($_REQUEST);
     echo json_encode($allres);
+  }
+
+  /* TIMESHEET REPORTS SUMMARY */
+  if( isset($_REQUEST['formtype']) && $_REQUEST['formtype']=='providerevents' ) {
+    $res = getReportsForEvents($_REQUEST);
+    echo json_encode($res);
   }
 
   /* QUERY ADDITIONAL ENCOUNTER INFO */
@@ -63,16 +82,14 @@ if(!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
   	echo json_encode($res);
   }
 
-
-
-  
+  die();
 
 } else {
   //die('Permission Error!');
 	
 }
 
-$excludeCategoryList = excludeCategoryItems();
+//$excludeCategoryList = excludeCategoryItems();
 function excludeCategoryItems() {
   global $_data;
   $excludeCategoryList = array();
@@ -110,6 +127,7 @@ function insertComments($params) {
 		$res = $_data->insertRow($query);
 	}
 	$result['result'] = $res;
+  $result['params'] = $params;
 
 	return $result;
 }
@@ -140,7 +158,8 @@ function providerListWithPagination($params) {
 
   if($search) {
     //$query = "SELECT id,username,fname,mname,lname,facility,facility_id FROM users WHERE (fname IS NOT NULL OR fname='') && CONCAT( fname, ' ', lname ) LIKE  '%".$search."%'   ORDER BY fname ASC";
-    $query = "SELECT id,username,fname,mname,lname,facility,facility_id FROM users WHERE (fname IS NOT NULL OR fname='') && CONCAT(fname,' ', mname,' ',lname) LIKE  '%".$search."%'   ORDER BY fname ASC";
+    //$query = "SELECT id,username,fname,mname,lname,facility,facility_id FROM users WHERE (fname IS NOT NULL OR fname='') && CONCAT(fname,' ', mname,' ',lname) LIKE  '%".$search."%'  OR fname LIKE '%$search%' OR lname LIKE '%$search%'  ORDER BY fname ASC";
+    $query = "SELECT id,username,fname,mname,lname,facility,facility_id FROM users WHERE (fname IS NOT NULL OR fname='') && CONCAT(fname, ' ', lname) LIKE  '%".$search."%'  OR fname LIKE '%$search%' OR lname LIKE '%$search%'  ORDER BY fname ASC";
   } else {
     $query = "SELECT id,username,fname,mname,lname,facility,facility_id FROM users WHERE (fname IS NOT NULL OR fname='') ORDER BY fname ASC";
   }
@@ -202,27 +221,478 @@ function getThePatientData($pid,$fields=null) {
 
 
 /* Query Esign */
-// $provider_id = 55;
-// $fromDate = '2022-10-01';
-// $toDate = '2022-11-30';
-// $limit = 15;
-// $page = 1;
+$provider_id = 9; /* Jim */
+//$provider_id = 55; /* Marie Breton */
+$date_type = 'dos_datetype';
+$fromDate = '2022-03-01';
+$toDate = '2022-03-30';
+$limit = 10;
+$page = 1;
 
-// $params['provider'] = 66;
-// $params['from_date'] = '2022-01-01';
-// $params['to_date'] = '2022-04-01';
-// $params['limit'] = 'all';
-// $data = getAllRecords($params);
+// $params['provider'] = $provider_id;
+// $params['from_date'] = $fromDate;
+// $params['to_date'] = $toDate;
+// $params['limit'] = $limit;
+// $params['page'] = $page;
+// $params['date_type'] = $date_type;
+
+
+// $query = "SELECT es.id AS esign_id, es.datetime AS esign_date, es.uid AS provider_id, frm.form_name, frm.form_id, frm.date AS service_date, frm.pid, frm.encounter, enc.pc_catid, enc.onset_date, enc.facility FROM esign_signatures es, forms frm, form_encounter enc  WHERE es.uid=".$provider_id." AND es.tid=frm.id AND frm.encounter=enc.encounter";
+// if($date_type=='dos_datetype') {
+//   /* Date of Service */
+//   $query .=" AND frm.date BETWEEN '".$fromDate."' AND '".$toDate."' ORDER BY frm.date ASC";
+// } else {
+//   /* E-Sign Date */
+//   $query .=" AND es.datetime BETWEEN '".$fromDate."' AND '".$toDate."' ORDER BY es.datetime ASC";
+// }
+
+// if($limit=='-1' || $limit=='all') {
+//   $sql_query = $query;
+// } else {
+//   $sql_query = $query . " LIMIT " . ( ( $page - 1 ) * $limit ) . ", ".$limit;
+// }
+
+// $result = $_data->query($sql_query)->fetchAll();
+
 // echo "<pre>";
-// print_r($data);
+// print_r($result);
 // echo "</pre>";
 
+
+// $query = "SELECT frm.encounter, enc.date AS service_date, enc.pid, enc.provider_id, enc.pc_catid, enc.facility, 
+//          CONCAT(pt.title,' ',pt.fname,' ',pt.mname,' ',pt.lname) AS patient_name, pt.Medicaid_Client AS patient_medicaid
+//          FROM forms frm, form_encounter enc, patient_data pt 
+//          WHERE EXISTS (SELECT esign.tid FROM esign_signatures esign WHERE frm.id = esign.tid) AS esign_id";
+
+// $query = "SELECT frm.encounter, frm.form_id, enc.date AS service_date, enc.pid, enc.provider_id, enc.pc_catid, enc.facility, 
+//          esign.id AS esign_id, esign.datetime AS esign_date, esign.tid AS form_table_id,  
+//          CONCAT(pt.title,' ',pt.fname,' ',pt.mname,' ',pt.lname) AS patient_name, pt.Medicaid_Client AS patient_medicaid
+//          FROM forms frm, form_encounter enc, patient_data pt, esign_signatures esign
+//          WHERE frm.form_id = esign.tid";
+
+// $query .=" AND enc.encounter=frm.encounter";
+// $query .=" AND frm.pid=pt.id";
+// $query .=" AND enc.provider_id=" . $provider_id;
+// if($date_type=='dos_datetype') {
+//   /* Date of Service */
+//   $query .=" AND enc.date BETWEEN '".$fromDate."' AND '".$toDate."' ORDER BY enc.date ASC";
+// } else {
+//   /* E-Sign Date */
+//   $query .=" AND esign.datetime BETWEEN '".$fromDate."' AND '".$toDate."' ORDER BY esign.datetime ASC";
+// }
+
+
+// if($limit=='-1' || $limit=='all') {
+//   $sql_query = $query;
+// } else {
+//   $sql_query = $query . " LIMIT " . ( ( $page - 1 ) * $limit ) . ", ".$limit;
+// }
+
+// $result = $_data->query($sql_query)->fetchAll();
+// echo "<pre>";
+// print_r($result);
+// echo "</pre>";
+
+
+
+function getReports($params) {
+  global $_data;
+  $provider_id = $params['provider'];
+  $from_date_var = $params['from_date'];
+  $to_date_var = $params['to_date'];
+  $date_type = ( isset( $params['date_type'] ) ) ? $params['date_type'] : 'esign_datetype';
+  $fromDate =  date('Y-m-d',strtotime($from_date_var));
+  $toDate =  date('Y-m-d',strtotime($to_date_var . '+1 day'));
+  $limit = ( isset( $params['limit'] ) ) ? $params['limit'] : 15;
+  $page = ( isset( $params['page'] ) ) ? $params['page'] : 1;
+  $links = ( isset( $params['links'] ) ) ? $params['links'] : 7;
+
+  // $query = "SELECT es.id AS esign_id, es.datetime AS esign_date, es.uid AS provider_id, frm.form_name, frm.form_id, frm.date AS service_date, 
+  //           frm.pid, frm.encounter, enc.id AS encounter_id, enc.pc_catid, enc.onset_date, enc.facility,
+  //           CONCAT(pt.title,' ',pt.fname,' ',pt.mname,' ',pt.lname) AS patient_name, pt.Medicaid_Client AS patient_medicaid
+  //           FROM esign_signatures es, forms frm, form_encounter enc, patient_data pt  WHERE es.uid=".$provider_id." AND es.tid=frm.id AND frm.encounter=enc.encounter AND frm.pid=pt.id";
+
+
+  // if($date_type=='dos_datetype') {
+  //   /* Date of Service */
+  //   $query .=" AND frm.date BETWEEN '".$fromDate."' AND '".$toDate."' ORDER BY frm.date ASC";
+  // } else {
+  //   /* E-Sign Date */
+  //   $query .=" AND es.datetime BETWEEN '".$fromDate."' AND '".$toDate."' ORDER BY es.datetime ASC";
+  // }
+
+
+  $query = "SELECT frm.encounter, frm.form_id, enc.id AS encounter_id, enc.date AS service_date, enc.pid, enc.provider_id, enc.pc_catid, enc.facility, 
+         esign.id AS esign_id, esign.datetime AS esign_date, esign.tid AS form_table_id,  
+         CONCAT(pt.title,' ',pt.fname,' ',pt.mname,' ',pt.lname) AS patient_name, pt.Medicaid_Client AS patient_medicaid
+         FROM forms frm, form_encounter enc, patient_data pt, esign_signatures esign 
+         WHERE frm.id = esign.tid";
+  $query .=" AND enc.encounter=frm.encounter";
+  $query .=" AND frm.pid=pt.id";
+  //$query .=" AND enc.provider_id=" . $provider_id;
+  $query .=" AND enc.provider_id=esign.uid";
+  $query .=" AND esign.uid=" . $provider_id;
+
+  if($date_type=='dos_datetype') {
+    /* Date of Service */
+    $query .=" AND enc.date BETWEEN '".$fromDate."' AND '".$toDate."' ORDER BY enc.date ASC";
+  } else {
+    /* E-Sign Date */
+    $query .=" AND esign.datetime BETWEEN '".$fromDate."' AND '".$toDate."' ORDER BY esign.datetime ASC";
+  }
+
+
+  if($limit=='-1' || $limit=='all') {
+    $sql_query = $query;
+  } else {
+    $sql_query = $query . " LIMIT " . ( ( $page - 1 ) * $limit ) . ", ".$limit;
+  }
+
+  $records = $_data->query($sql_query)->fetchAll();
+  $entries = array();
+  if($records) {
+    foreach($records as $row) {
+
+      $esign_date = ($row['esign_date']) ? date('m/d/Y',strtotime($row['esign_date'])) : '';      
+      $service_date = ($row['service_date']) ? date('m/d/Y',strtotime($row['service_date'])) : '';      
+      
+      $row['esign_date'] = $esign_date;
+      $row['service_date'] = $service_date;
+      $row['cpt_code'] = '';
+      $row['cpt_custom_code'] = '';
+      $row['cpt_custom_code_description'] = '';
+      $row['cpt_custom_code_rate'] = '';
+      $row['normal_rate'] = '';
+      $row['rate'] = '';
+      $pc_catid = $row['pc_catid'];
+      $has_rate = array();
+      $rate_amount = 0;
+      if($pc_catid) {
+
+
+        /* CPT CODE */
+        $cpt_query = "SELECT pc_catname FROM openemr_postcalendar_categories WHERE pc_catid=".$pc_catid;
+        $cpt_result = $_data->query($cpt_query)->fetchRow();
+        if($cpt_result) {
+          $row['cpt_code'] = $cpt_result['pc_catname'];
+        }
+
+
+        /* EMPLOYEE RATES */
+        $rateQuery = "SELECT * FROM user_employee_rates WHERE user_id=".$provider_id." AND pc_catid=".$pc_catid;
+        $rateResult = $_data->query($rateQuery)->fetchRow();
+        if($rateResult) {
+          $has_rate[] = $rateResult['rate'];
+          $rate_amount += $rateResult['rate'];
+          $row['normal_rate'] = ($rateResult['rate']) ? number_format((float)$rateResult['rate'], 2, '.', '') : '';
+        }
+      }
+
+
+      /* Custom Code */
+      $encounter_row_id = $row['encounter_id'];
+      $cptCustomCode = getCustomCodeRates($encounter_row_id,$provider_id);
+      if( isset($cptCustomCode['code']) && $cptCustomCode['code'] ) {
+        $row['cpt_custom_code'] = $cptCustomCode['code'];
+        $row['cpt_custom_code_description'] = $cptCustomCode['code'] . ' - ' . $cptCustomCode['description'];
+        $row['cpt_custom_code_rate'] = $cptCustomCode['rate'];
+        $rate_amount += ($cptCustomCode['rate']) ? $cptCustomCode['rate'] : 0;
+        $has_rate[] = $cptCustomCode['rate'];
+      }
+      /* custom code */
+      // $output['rate'] = '';
+      // $output['code'] = '';
+      // $output['description'] = '';
+
+      $rate_amount_format = number_format((float)$rate_amount, 2, '.', '');
+      if($has_rate && array_filter($has_rate)) {
+        $row['rate'] = $rate_amount_format;
+      } else {
+        $row['rate'] = ' -- ';
+      }
+
+
+      /* TIMESHEET COMMENTS */
+      $row['comment_id'] = '';
+      $row['has_comment'] = '';
+      if( isset($row['encounter_id']) && $row['encounter_id'] ) {
+        $type_id = $row['encounter_id'];
+        $comment_query = "SELECT id,comments FROM employee_timesheet WHERE type_id=".$type_id." AND type='encounter'";
+        $comment_result = $_data->query($comment_query)->fetchRow();
+        $row['comment_id'] = ( isset($comment_result['id']) ) ? $comment_result['id'] : '';
+        $row['has_comment'] = ( isset($comment_result['comments']) &&  preg_replace("/\s+/", "", $comment_result['comments']) ) ? true : false;
+      }
+
+      $entries[] = $row;
+    }
+  }
+  $total = $_data->query($query)->numRows();
+  $paginate = $_data->pagination( $total, $params, 'pagination' );
+  if($page==1) {
+    $offset = 1;
+  } else {
+    $offset = (($page - 1) * $limit) + 1;
+  }
+
+  $response['records'] = $entries;
+  $response['total'] = $total;
+  $response['pagination'] = $paginate;
+  $response['loop_start'] = $offset;
+
+
+  /* SUMMARY RATES */
+  // $summary = getSummaryRates($query,$provider_id);
+  // $response['summary'] = $summary;
+
+  return $response;
+}
+
+
+function getSummaryRates($params) {
+  global $_data;
+  $provider_id = $params['provider'];
+  $from_date_var = $params['from_date'];
+  $to_date_var = $params['to_date'];
+  //$summarytype = ( isset( $params['summarytype'] ) ) ? $params['summarytype'] : 'encounter';
+  $date_type = ( isset( $params['date_type'] ) ) ? $params['date_type'] : 'esign_datetype';
+  $fromDate =  date('Y-m-d',strtotime($from_date_var));
+  $toDate =  date('Y-m-d',strtotime($to_date_var . '+1 day'));
+  $query = '';
+
+  // if($summarytype=='encounter') {
+  //   $query = "SELECT es.id AS esign_id, frm.encounter, enc.id AS encounter_id, enc.pc_catid FROM esign_signatures es, forms frm, form_encounter enc, patient_data pt  WHERE es.uid=".$provider_id." AND es.tid=frm.id AND frm.encounter=enc.encounter AND frm.pid=pt.id";
+  //   if($date_type=='dos_datetype') {
+  //     /* Date of Service */
+  //     $query .=" AND frm.date BETWEEN '".$fromDate."' AND '".$toDate."' ORDER BY frm.date ASC";
+  //   } else {
+  //     /* E-Sign Date */
+  //     $query .=" AND es.datetime BETWEEN '".$fromDate."' AND '".$toDate."' ORDER BY es.datetime ASC";
+  //   }
+  // }
+
+  // if( empty($query) ) {
+  //   $response['summary_details'] = '';
+  //   $response['summary_total'] = '';
+  // }
+
+
+  $query = "SELECT es.id AS esign_id, frm.encounter, enc.id AS encounter_id, enc.pc_catid FROM esign_signatures es, forms frm, form_encounter enc, patient_data pt  WHERE es.uid=".$provider_id." AND es.tid=frm.id AND frm.encounter=enc.encounter AND frm.pid=pt.id";
+  if($date_type=='dos_datetype') {
+    /* Date of Service */
+    $query .=" AND frm.date BETWEEN '".$fromDate."' AND '".$toDate."' ORDER BY frm.date ASC";
+  } else {
+    /* E-Sign Date */
+    $query .=" AND es.datetime BETWEEN '".$fromDate."' AND '".$toDate."' ORDER BY es.datetime ASC";
+  }
+
+  $allResult = $_data->query($query)->fetchAll();
+  $summary_list = array();
+  $output = array();
+  $final_total = 0;
+  if($allResult) {
+    foreach($allResult as $row) {
+      $pc_catid = $row['pc_catid'];
+      $has_rate = array();
+      $rate_amount = 0;
+      if($pc_catid) {
+        /* EMPLOYEE RATES */
+        $rateQuery = "SELECT rate FROM user_employee_rates WHERE user_id=".$provider_id." AND pc_catid=".$pc_catid;
+        $rateResult = $_data->query($rateQuery)->fetchRow();
+        if($rateResult) {
+          $rate_amount += ($rateResult['rate']) ? $rateResult['rate'] : 0;
+        }
+      }
+
+      // if($summarytype=='encounter') {
+      //   /* Custom Code */
+      //   $encounter_row_id = $row['encounter_id'];
+      //   $cptCustomCode = getCustomCodeRates($encounter_row_id,$provider_id);
+      //   if( isset($cptCustomCode['code']) && $cptCustomCode['code'] ) {
+      //     $rate_amount += ($cptCustomCode['rate']) ? $cptCustomCode['rate'] : 0;
+      //   }
+      // }
+
+      /* Custom Code */
+      $encounter_row_id = $row['encounter_id'];
+      $cptCustomCode = getCustomCodeRates($encounter_row_id,$provider_id);
+      if( isset($cptCustomCode['code']) && $cptCustomCode['code'] ) {
+        $rate_amount += ($cptCustomCode['rate']) ? $cptCustomCode['rate'] : 0;
+      }
+
+      $rate_amount_format = number_format((float)$rate_amount, 2, '.', '');
+      $summary_list[$pc_catid][] = $rate_amount;
+    }
+
+    $provider_events_rates = getProviderEventsRates($params);
+    if($provider_events_rates) {
+      foreach($provider_events_rates as $catid=>$provRates) {
+        $summary_list[$catid] = $provRates;
+      }
+    }
+
+    if($summary_list) {
+
+      foreach($summary_list as $catid => $rateList) {
+        if(strpos($catid, '_events') !== false){
+          $catid = str_replace('_events','',$catid);
+          $srow['type'] = 'events';
+        } else {
+          $srow['type'] = 'encounter';
+        }
+        $cpt_query = "SELECT pc_catname FROM openemr_postcalendar_categories WHERE pc_catid=".$catid;
+        $cpt_result = $_data->query($cpt_query)->fetchRow();
+        $cpt_catname = ($cpt_result) ? $cpt_result['pc_catname'] : '';
+        $srow['pc_catid'] = $catid;
+        $srow['pc_catname'] = $cpt_catname;
+        $srow['quantity'] = count($rateList);
+        $srow['total_rates'] = '0.00';
+        //$srow[$catid]['ratelist'] = $rateList;
+
+        if($rateList && array_filter($rateList)) {
+          $ratesListFiltered = array_filter($rateList);
+          $totalRates = array_sum($ratesListFiltered);
+          $totalRatesFormat = number_format((float)$totalRates, 2, '.', '');
+          $srow['total_rates'] = $totalRatesFormat;
+          $final_total += $totalRates;
+        }
+
+        $output[] = $srow;
+
+      }
+    }
+  }
+
+  //$response['summary_ratelist'] = $summary_list;
+  $response['summary_details'] = $output;
+  $response['summary_total'] = number_format((float)$final_total, 2, '.', '');
+
+  return $response;
+}
+
+
+function getProviderEventsRates($params) {
+  global $_data;
+  $params['limit'] = 'all';
+  $provider_id = $params['provider'];
+  $summary_list = array();
+  $output = array();
+  $final_total = 0;
+  $res = getReportsForEvents($params);
+  if( isset($res['records']) && $res['records'] ) {
+    foreach($res['records'] as $row) {
+      $pc_catid = $row['pc_catid'];
+      $rate_amount = 0;
+      if($pc_catid) {
+        /* EMPLOYEE RATES */
+        $rateQuery = "SELECT rate FROM user_employee_rates WHERE user_id=".$provider_id." AND pc_catid=".$pc_catid;
+        $rateResult = $_data->query($rateQuery)->fetchRow();
+        if($rateResult) {
+          $rate_amount += ($rateResult['rate']) ? $rateResult['rate'] : 0;
+        }
+        $rate_amount_format = number_format((float)$rate_amount, 2, '.', '');
+        $summary_list[$pc_catid.'_events'][] = $rate_amount;
+      }
+    }
+  }
+  return $summary_list; 
+}
+
+
+
+function getReportsForEvents($params) {
+  global $_data;
+  $provider_id = $params['provider'];
+  $from_date_var = $params['from_date'];
+  $to_date_var = $params['to_date'];
+  $date_type = ( isset( $params['date_type'] ) ) ? $params['date_type'] : 'esign_datetype';
+  $fromDate =  date('Y-m-d',strtotime($from_date_var));
+  $toDate =  date('Y-m-d',strtotime($to_date_var . '+1 day'));
+  $limit = ( isset( $params['limit'] ) ) ? $params['limit'] : 15;
+  $page = ( isset( $params['page'] ) ) ? $params['page'] : 1;
+  $links = ( isset( $params['links'] ) ) ? $params['links'] : 7;
+  $entries = array();
+  $excludeCategoryList = excludeCategoryItems();
+  $response['records'] = '';
+  $response['total'] = '';
+  $response['pagination'] = '';
+  $response['loop_start'] = '';
+  
+  if($date_type=='dos_datetype') {
+  
+    //EXCLUDE CATEGORIES 
+    $excludeCats = ($excludeCategoryList) ? " AND pc_catid NOT IN ( '" . implode( "', '" , $excludeCategoryList ) . "' ) " : "";
+    //$query = "SELECT events.* FROM openemr_postcalendar_events events WHERE events.pc_aid=".$provider_id." AND (events.pc_pid IS NULL OR events.pc_pid='') AND events.pc_eventDate BETWEEN '".$fromDate."' AND '".$toDate."'".$excludeCats." ORDER BY events.pc_eventDate DESC"; 
+    $query = "SELECT e.pc_eid, e.pc_catid, e.pc_title, e.pc_eventDate AS event_date FROM openemr_postcalendar_events e WHERE e.pc_aid=".$provider_id." AND (e.pc_pid IS NULL OR e.pc_pid='') AND e.pc_eventDate BETWEEN '".$fromDate."' AND '".$toDate."'".$excludeCats." ORDER BY e.pc_eventDate DESC"; 
+
+    if($limit=='-1' || $limit=='all') {
+      $sql_query = $query;
+    } else {
+      $sql_query = $query . " LIMIT " . ( ( $page - 1 ) * $limit ) . ", ".$limit;
+    }
+
+    $total = $_data->query($query)->numRows();
+    $paginate = $_data->pagination( $total, $params, 'pagination' );
+    $result = $_data->query($sql_query)->fetchAll();
+    if($page==1) {
+      $offset = 1;
+    } else {
+      $offset = (($page - 1) * $limit) + 1;
+    }
+
+    if($result) {
+      
+      foreach($result as $row) {
+        $pc_catid = $row['pc_catid'];
+        $rate_amount = 0;
+        $row['rate'] = '';
+        $eventData = ($row['event_date']) ? date('d/m/Y',strtotime($row['event_date'])) : '';
+        $row['event_date'] = $eventData;
+        if($pc_catid) {
+
+          /* EMPLOYEE RATES */
+          $rateQuery = "SELECT * FROM user_employee_rates WHERE user_id=".$provider_id." AND pc_catid=".$pc_catid;
+          $rateResult = $_data->query($rateQuery)->fetchRow();
+          if($rateResult) {
+            $rate_amount += $rateResult['rate'];
+            $row['rate'] = ($rate_amount) ? number_format((float)$rate_amount, 2, '.', '') : '';
+          }
+        }
+
+
+        /* TIMESHEET COMMENTS */
+        $row['comment_id'] = '';
+        $row['has_comment'] = '';
+        if( isset($row['pc_eid']) && $row['pc_eid'] ) {
+          $type_id = $row['pc_eid'];
+          $comment_query = "SELECT id,comments FROM employee_timesheet WHERE type_id=".$type_id." AND type='events'";
+          $comment_result = $_data->query($comment_query)->fetchRow();
+          $row['comment_id'] = ( isset($comment_result['id']) ) ? $comment_result['id'] : '';
+          $row['has_comment'] = ( isset($comment_result['comments']) &&  preg_replace("/\s+/", "", $comment_result['comments']) ) ? true : false;
+        }
+
+        $entries[] = $row;
+      }
+
+    }
+
+
+    $response['records'] = $entries;
+    $response['total'] = $total;
+    $response['pagination'] = $paginate;
+    $response['loop_start'] = $offset;
+
+  }
+
+  return $response;
+}
 
 function getTimesheetRecords($params) {
 	global $_data;
 	$provider_id = $params['provider'];
   $from_date_var = $params['from_date'];
   $to_date_var = $params['to_date'];
+
+  //$dateType = ( isset( $params['date_type'] ) ) ? $params['date_type'] : 'esign_dt';
 
 	$fromDate =  date('Y-m-d',strtotime($from_date_var));
 	$toDate =  date('Y-m-d',strtotime($to_date_var . '+1 day'));
@@ -414,6 +884,7 @@ function getTimesheetRecords($params) {
 	$respond['encounters']['rates'] = $group_categories;
 	$respond['encounters']['paginate'] = $paginate;
 	$respond['encounters']['categories'] = $categories;
+  //$respond['encounters']['records'] = $records;
 	
 	/* PROVIDER EVENTS */
 	$events = getProviderEvents($params);
@@ -454,7 +925,9 @@ function displayTimesheetRows($result,$offset) {
 		foreach($result as $row) {
 			$notes = getComments($row['id'],'encounter'); 
 			$note_id = ($notes) ? $notes['id'] : '';
-			$viewLabel = ($note_id) ? 'View Comment':'Add Comment';
+      $hasComment = ( isset($notes['comments']) && preg_replace("/\s+/", "", $notes['comments']) ) ? true : false;
+			//$viewLabel = ($note_id) ? 'View Comment':'Add Comment';
+      $viewLabel = ($hasComment) ? '<i class="fa fa-commenting-o" data-status="has-comment" aria-hidden="true"></i>':'<i class="fa fa-commenting-o" data-status="no-comment" aria-hidden="true"></i>';
       $customCode = (isset($row['customCode']) && $row['customCode']) ? $row['customCode'] : '';
       $extra_code = '';
       if($customCode) {
@@ -463,24 +936,26 @@ function displayTimesheetRows($result,$offset) {
         $x_desc = (isset($customCode['description']) && $customCode['description']) ? $customCode['description'] : '';
         $extra_code = $x_code.' - '.$x_desc;
       }
+      //$esignDate = (isset($row['serviceDate']) && $row['serviceDate']) ? date('m/d/Y h:i:s a', strtotime($row['serviceDate'])) : '';
+      $esignDate = (isset($row['serviceDate']) && $row['serviceDate']) ? date('m/d/Y', strtotime($row['serviceDate'])) : '';
+      $actual_service_date = (isset($row['onset_date']) && $row['onset_date']) ? date('m/d/Y', strtotime($row['onset_date'])) : '';
 		?>
 		<tr data-encounternum="<?php echo $row['encounter'] ?>" data-noteid="<?php echo $note_id ?>" data-typeid="<?php echo $row['id'] ?>" data-type="encounter" data-encounter-id="<?php echo $row['id'] ?>" data-esign-id="<?php echo $row['esignID'] ?>" class="line-item encounter-id-<?php echo $row['id'] ?>">
-         <td class="col1"><?php echo $rowCtr  ?>.</td>
-         <td class="col2"><?php echo $row['patientFullName'] ?></td>
-         <td class="col3"><?php echo $row['serviceDate'] ?></td>
-         <td class="col4"><?php echo $row['facility'] ?></td>
-         <td class="col5">
-          <?php echo $row['codeName'] ?>
-          <?php if ($extra_code) { ?>
-          <div><strong style="color:#e32d2d">(<?php echo $extra_code ?>)</strong></div>
-          <?php } ?>
-        </td>
-         <td class="col6"><?php echo $row['patientMedicaid'] ?></td>
-         <td class="col7"><?php echo ($row['rateAmount']) ? number_format((float)$row['rateAmount'], 2, '.', '') : '0.00'; ?></td>
-         <td class="col8 action-buttons">
-           <a href="javascript:void(0)" class="action-btn" data-action="view"><?php echo $viewLabel ?></a>
-         </td>
-      </tr>
+      <td class="col1"><?php echo $rowCtr  ?>.</td>
+      <td class="col2"><?php echo $row['patientFullName'] ?></td>
+      <td class="col3"><?php echo $esignDate ?></td>
+      <td class="col4"><?php echo $actual_service_date ?></td>
+      <td class="col5"><?php echo $row['facility'] ?></td>
+      <td class="col6">
+        <?php echo $row['codeName'] ?>
+        <?php if ($extra_code) { ?>
+        <div><strong style="color:#e32d2d">(<?php echo $extra_code ?>)</strong></div>
+        <?php } ?>
+      </td>
+      <td class="col7"><?php echo $row['patientMedicaid'] ?></td>
+      <td class="col8"><?php echo ($row['rateAmount']) ? number_format((float)$row['rateAmount'], 2, '.', '') : '0.00'; ?></td>
+      <td class="col9 action-buttons"><a href="javascript:void(0)" class="action-btn comment-button-link <?php echo ($hasComment) ? 'has-comment':'no-comment' ?>" data-action="view" title="<?php echo ($hasComment) ? 'View Comment':'Add Comment' ?>"><?php echo $viewLabel ?></a></td>
+    </tr>
 		<?php $rowCtr++; }
 	} else { ?>
 		<tr class="no-record-row">
@@ -662,15 +1137,6 @@ function getProviderEvents($params) {
 	$rates_html = (isset($categories['html']) && $categories['html']) ? $categories['html'] : '';
 
   $html = ($total) ? displayProviderEventsRows($result,$offset) : '';
-	
-  // if($total==0) {
-  //   $rates_total = 0;
-  //   $rates_html = '';
-  //   $html = '';
-  // } else {
-  //   $html = displayProviderEventsRows($result,$offset);
-  // }
-  
   $records['display'] = $html;
 	$records['total'] = $total;
 	$records['paginate'] = $paginate;
