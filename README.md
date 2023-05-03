@@ -1,6 +1,13 @@
 =======
 # OpenEMR Changes
 
+### Modified Date: May 03, 2023
+* Path: interface/main/tabs/js/tabs_view_model.js   << See line 314 
+* Path: interface/patient_file/encounter/encounter_top.php << See line 73-80
+* Path: openemr/interface/forms/fee_sheet/new.php
+
+=======
+
 Modified Date: April 09, 2023
 
 **Modified files:**
