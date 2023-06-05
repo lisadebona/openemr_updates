@@ -186,17 +186,35 @@ if ((empty($return)) || ($return == false)) {
 
 ?>
 
+<?php /* This script was added on June 05, 2023 */?>
+
 <style type="text/css">
-#theform #bigCal *{
+#theform #bigCal * {
   box-sizing:border-box;
-}
-#theform td.week_dateheader {
-  border-right: 1px solid #FFF;
-  border-left: none;
 }
 #theform tr.lastRow td#times {
   width: 30px!important;
 }
+#theform .WEEKEND_VIEW td.week_dateheader {
+  background-color: #FFF;
+}
+#theform .WEEKEND_VIEW td.week_dateheader:nth-child(2),
+#theform .WEEKEND_VIEW td.week_dateheader:nth-child(8) {
+  background-color: #edeaff!important;
+}
+#theform .WEEKEND_VIEW tr.weekend-date-heading td:nth-child(1) {
+  background-color: #edeaff!important;
+  border-bottom: 1px solid #999;
+}
+#theform .WEEKEND_VIEW td.week_dateheader {
+  background-color: #FFF;
+  border-right: 1px solid #FFF;
+  border-bottom: 1px solid #999;
+  border-left: none;
+}
+/*.WEEKEND_VIEW {
+  background-color: #FFF!important;
+}*/
 </style>
 <script type="text/javascript">
   window.onload = function() {
@@ -216,6 +234,8 @@ if ((empty($return)) || ($return == false)) {
             var topToolBarHeight = $('#topToolbarRight').outerHeight();
             var bottomLeftWidth = $('#bottomLeft').width();
             var bigCalWidth = $('#theform .page-content-wrapper #bigCal').width();
+
+            $('#theform #bigCal').addClass('WEEKEND_VIEW');
 
             $('#topToolbarRight').css({
               'position':'fixed',
@@ -273,25 +293,25 @@ if ((empty($return)) || ($return == false)) {
               var firstRowHeight = $('#theform #bigCal table tbody tr').eq(0).outerHeight();
               var timesCol = $('#theform #times').width();
               //var tableLeftOffset = bottomLeftWidth + timesCol;
-              var tableLeftOffset = bottomLeftWidth + 29;
+              var tableLeftOffset = bottomLeftWidth + 36;
               var tableTopOffset = topToolBarHeight + providerRowHeight;
 
-              // $('#theform #bigCal table tbody td').not('#times, .providerheader').css({
-              //   'width':'14.2857%'
-              // });
+              var colTotalWidth = 0;
+              var scheduleRowCount = $('#theform #bigCal table tbody tr td.schedule').length;
+              $('#theform #bigCal table tbody tr td.schedule').each(function(){
+                colTotalWidth += $(this).innerWidth();
+              });
 
+              var dateDeadingWidth = colTotalWidth + 11;
+              $('#theform #bigCal table tbody tr').eq(1).addClass('weekend-date-heading');
               $('#theform #bigCal table tbody tr').eq(1).css({
                 'position':'fixed',
                 'top': tableTopOffset + 'px',
                 'left': tableLeftOffset + 'px',
-                //'left': '0px',
                 'z-index':'80',
-                'width': bigCalWidth + 'px'
+                'width': dateDeadingWidth + 'px'
               });
-              
-              $('#theform #bigCal table tbody tr').eq(1).find('td').not('td:nth-child(1)').css({
-                'border-bottom': '1px solid #999'
-              });
+            
 
               $('#theform #bigCal table tbody tr').eq(1).find('td').not('td:nth-child(1), td:nth-child(2)').css({
                 'background-color': '#FFF',
@@ -327,6 +347,5 @@ if ((empty($return)) || ($return == false)) {
   }
 </script>
 <?php
-
 
 exit;
